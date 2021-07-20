@@ -1,5 +1,5 @@
 import { GraphQLServer } from "graphql-yoga";
-
+import { v4 as uuidv4 } from "uuid";
 
 /**
 
@@ -57,9 +57,9 @@ const Posts = [
 ];
 
 const Comments = [
-  {id: "122", text: "Thanks helping", authorID: "2", postID: "10"},
-  {id: "267", text: "Going home", authorID: "1", postID: "10"},
-  {id: "641", text: "Dinner Time", authorID: "1", postID: "32"},
+  {id: "122", text: "Thanks helping", author: "2", post: "10"},
+  {id: "267", text: "Going home", author: "1", post: "10"},
+  {id: "641", text: "Dinner Time", author: "1", post: "32"},
 ];
 
 
@@ -71,6 +71,31 @@ const typeDefs = `
     comments(query: String): [Comment!]!
     me: User!
     post: Post!
+  }
+
+  type Mutation {
+    createUser(data: CreateUserInput): User!
+    createPost(data: CreatePostInput): Post!
+    createComment(data: CreateCommentInput): Comment!
+  }
+
+  input CreateUserInput {
+    name: String!
+    email: String!
+    age: Int
+  }
+
+  input CreatePostInput {
+    title: String!
+    body: String!
+    published: Boolean!
+    author: ID!
+  }
+
+  input CreateCommentInput {
+    text: String
+    author: ID!
+    post: ID!
   }
 
   type User {
@@ -142,6 +167,51 @@ const resolvers = {
       return Comments;
     },
   },
+  Mutation: {
+    createUser(parent, args, ctx, info) {
+      const emailToken = Users.some(u => u.email === args.data.email)
+
+      if(emailToken) throw new Error('Email taken.')
+
+      const user = {
+        id: uuidv4(),
+        ...args.data
+      }
+
+      Users.push(user)
+
+      return user;
+    },
+    createPost(parent, args, ctx, info) {
+      const userExists = Users.some(u => u.id === args.data.author);
+      if(!userExists) throw new Error("User not found");
+
+      const post = {
+        id: uuidv4(),
+        ...args.data
+      };
+
+      Posts.push(post)
+
+      return post;
+    },
+    createComment(parent, args, ctx, info) {
+      const userExists = Users.some((u) => u.id === args.author);
+      const isPublished = Posts.some(p => p.id === args.data.post && p.published === true)
+
+      if (!userExists && !isPublished) throw new Error("Something going wrong");
+
+
+      const comment = {
+        id: uuidv4(),
+        ...args.data
+      }
+
+      Comments.push(comment);
+
+      return comment;
+    }
+  },
   Post: {
     author(parent, args, ctx, info) {
       return Users.find((user) => {
@@ -149,10 +219,10 @@ const resolvers = {
       });
     },
     comments(parent, args) {
-      return Comments.filter(c => {
-        return c.postID === parent.id
-      })
-    }
+      return Comments.filter((c) => {
+        return c.postID === parent.id;
+      });
+    },
   },
   User: {
     posts(parent, args, ctx, info) {
@@ -162,17 +232,17 @@ const resolvers = {
     },
     comments(parent, args) {
       return Comments.filter((c) => {
-        return c.postID === parent.id;
+        return c.post === parent.id;
       });
     },
   },
   Comment: {
     author(parent, args) {
-      return Users.find((user) => user.id === parent.authorID);
+      return Users.find((user) => user.id === parent.author);
     },
     post(parent, args) {
-      return Posts.find((p => p.id === parent.postID))
-    }
+      return Posts.find((p) => p.id === parent.post);
+    },
   },
 };
 
