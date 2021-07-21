@@ -1,3 +1,6 @@
+> package.json
+- --ext [js, graphql] are add other js to watch in nodemon
+
 
   * [Folder Location](#folder-location)
   * [Only Single endpoint](#only-single-endpoint)
