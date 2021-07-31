@@ -30,7 +30,7 @@ let Posts = [
     id: "21",
     title: "GraphqL 951",
     body: "",
-    published: false,
+    published: true,
     author: "1",
   },
   {

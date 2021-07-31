@@ -62,7 +62,7 @@ const Mutation = {
 
     return user;
   },
-  createPost(parent, args, { db }, info) {
+  createPost(parent, args, { db, pubsub }, info) {
     const userExists = db.Users.some((u) => u.id === args.data.author);
     if (!userExists) throw new Error("User not found");
 
@@ -72,6 +72,10 @@ const Mutation = {
     };
 
     db.Posts.push(post);
+
+    if (args.data.published) {
+      pubsub.publish("post", {post});
+    }
 
     return post;
   },
@@ -98,7 +102,7 @@ const Mutation = {
 
     return post;
   },
-  createComment(parent, args, { db }, info) {
+  createComment(parent, args, { db, pubsub }, info) {
     const userExists = db.Users.some((u) => u.id === args.author);
     const isPublished = db.Posts.some(
       (p) => p.id === args.data.post && p.published === true
@@ -112,6 +116,7 @@ const Mutation = {
     };
 
     db.Comments.push(comment);
+    pubsub.publish(`comment ${args.data.post}`, { comment });
 
     return comment;
   },
@@ -124,15 +129,15 @@ const Mutation = {
 
     return deleteComments[0];
   },
-  updateComment(parent, args, {db}, info) {
-    const {id, data} = args;
+  updateComment(parent, args, { db }, info) {
+    const { id, data } = args;
     const comment = db.Comments.find((comment) => comment.id === id);
-    if(!comment) throw new Error("Comment not found");
+    if (!comment) throw new Error("Comment not found");
 
-    if(typeof data.text === "string") comment.text = data.text;
+    if (typeof data.text === "string") comment.text = data.text;
 
     return comment;
-  }
+  },
 };
 
 export default Mutation;
