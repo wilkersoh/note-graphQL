@@ -1,12 +1,14 @@
 > package.json
 - --ext [js, graphql] are add other js to watch in nodemon
 
-
+- [GraphQL](#graphql)
   * [Folder Location](#folder-location)
   * [Only Single endpoint](#only-single-endpoint)
   * [Types](#types)
   * [好處](#--)
+- [Query](#query)
   * [Flow](#flow)
+  * [完整的resolvers and relations](#---resolvers-and-relations)
   * [Basic](#basic)
   * [Pass value](#pass-value)
     + [GraphQL Gui](#graphql-gui)
@@ -15,9 +17,21 @@
   * [Filter with query](#filter-with-query)
     + [GraphQL Gui](#graphql-gui-2)
   * [GraphQL Relation Flow](#graphql-relation-flow)
-  * [Relation (get user from post (1 direction))](#relation--get-user-from-post--1-direction--)
+  * [Relation (get user from post [1 direction])](#relation--get-user-from-post--1-direction--)
     + [GraphQL Gui with relation](#graphql-gui-with-relation)
-  * [Relation (user and post (2 direction))](#relation--user-and-post--2-direction--)
+- [Mutation](#mutation)
+  * [Basic](#basic-1)
+    + [GraphQL Gui](#graphql-gui-3)
+  * [Mutation Input](#mutation-input)
+    + [GraphQL Gui](#graphql-gui-4)
+  * [Delete](#delete)
+  * [Update](#update)
+    + [GraphQL Gui](#graphql-gui-5)
+- [Subscription](#subscription)
+  * [Basic](#basic-2)
+  * [Subscription example](#subscription-example)
+    + [GraphQL Gui](#graphql-gui-6)
+    + [Test](#test)
 
 # GraphQL
 
@@ -26,13 +40,16 @@ Tags: Graphql, Learning
 ## Folder Location
 
 ```jsx
-// Playgrund/graphql-basic
+// Playgrund/note-graphQL
+yarn install
+yarn start
+graphql playground serve in localhost:4000
 ```
 
 ## Only Single endpoint
 
 ```jsx
-// default
+// default 
 http://localhost:4000
 ```
 
@@ -55,6 +72,8 @@ http://localhost:4000
 
 mobile 和 desktop 要拿的資料 可能會不同，因為 可能 design不同 顯示資料的方式也不同 所以 如果在mobile 去 拿desktop的資料 就浪費了 因為 沒用到
 
+# Query
+
 ## Flow
 
 1. create type first
@@ -74,7 +93,7 @@ const typeDefs = `
 const typeDefs = `
 	type Query {
 		users(name: String): [User!]!
-	}
+	}	
 `;
 ```
 
@@ -84,7 +103,7 @@ const typeDefs = `
 const resolvers = {
 	Query: { // 是對應 number 2 裡 Query的 fn 名
 		users(parent, args, ctx, info) {
-
+			
 		}
 	}
 }
@@ -100,7 +119,7 @@ const typeDefs = `
 			posts: [Post!]!
 	}
 	type Post {
-		id
+		id 
 		title
 	}
 `;
@@ -120,6 +139,35 @@ const resolvers = {
 const user = {
 	anotherObjectID: "2"
 }
+```
+
+## 完整的resolvers and relations
+
+```jsx
+import Query from "./resolvers/Query";
+import Mutation from "./resolvers/Mutation";
+import Subscription from "./resolvers/Subscription";
+import User from "./resolvers/User";
+import Post from "./resolvers/Post"
+import Comment from "./resolvers/Comment";
+
+const pubsub = new PubSub();
+
+const server = new GraphQLServer({
+	typeDefs: "./src/schema.graphql",
+  resolvers: {
+		Query,
+    Mutation,
+    Subscription,
+		User,
+    Post,
+    Comment,
+	},
+	context: {
+    db,
+    pubsub,
+  },
+});
 ```
 
 ## Basic
@@ -406,14 +454,14 @@ const resolvers = {
 	User: { // 一定要是User 這個type User 下面有 posts
 		posts(parent, args, ctx, info) { // posts 是對應 posts: [Posts!]的posts
       return Posts.filter((post) => {
-        return post.author === parent.id
+        return post.author === parent.id 
       })
     }
 	}
 }
 ```
 
-## Relation (get user from post (1 direction))
+## Relation (get user from post [1 direction])
 
 ```jsx
 // data
@@ -514,8 +562,520 @@ query {
 }
 ```
 
-## Relation (user and post (2 direction))
+# Mutation
+
+## Basic
+
+`Tips:` 要先做好 Query 才能做 Mutation， 因為 在 mutation裡 我們 create relationship的時候 它也會去 run resolver `Query:{}` 外的 object function
+
+```jsx
+const typeDefs = `
+	type Mutation {
+    createUser(name: String!, email: String!, age: Int): User!
+  }
+
+	type User {
+    id: ID!
+    name: String!
+    email: String!
+    age: Int
+    posts: [Post!]!
+    comments: [Comment!]!
+  }
+`
+```
+
+```jsx
+const resolvers = {
+	Query:{},
+	Mutation: {
+		createUser(parent, args, ctx, info) {
+			
+		}
+	}
+}
+```
+
+### GraphQL Gui
+
+name id email 是 create 後 要return的東西
+
+```jsx
+mutation {
+  createUser(name: "TesterDev", email: "testdev@gmail.com") {
+	  id
+		name
+    email
+  }
+}
+```
+
+先create query先才做mutation， 因為 relation的關係 如：
+
+```jsx
+type Mutation {
+    createUser(name: String!, email: String!, age: Int): User!
+    createPost(title: String!, body: String!, published: Boolean!, author: ID!): Post!
+}
+```
+
+```jsx
+const resolvers = {
+	Query:{},
+	Mutation: {
+		createPost(parent, args, ctx, info) {
+      const userExists = Users.some(u => u.id === args.author);
+
+      if(!userExists) throw new Error("User not found");
+
+      const post = {
+        id: uuidv4(),
+        title: args.title,
+        body: args.body,
+        published: args.published,
+        author: args.author,
+      };
+
+      Posts.push(post)
+
+      return post;
+	  }
+	}
+	Post: {
+    author(parent, args, ctx, info) {
+      return Users.find((user) => {
+        return user.id === parent.author;
+      });
+    },
+    comments(parent, args) {
+      return Comments.filter((c) => {
+        return c.postID === parent.id;
+      });
+    },
+  },
+}
+```
+
+## Mutation Input
+
+previous version
+
+```jsx
+type Mutation {
+    createUser(name: String!, email: String!, age: Int): User!
+}
+```
+
+Clean code
+
+```jsx
+const typeDefs = `
+	type Mutation {
+    createUser(data: CreateUserInput): User!
+	}
+	
+	input CreateUserInput {
+    name: String! 
+    email: String!
+    age: Int
+  }
+`;
+```
+
+`注意：` 要 + data object 然後拿value的時候 是 `args.data.object`
 
 ```jsx
 
+const resolvers = {
+	Mutation: {
+		createUser(parent, args, ctx, info) {
+      const emailToken = Users.some(u => u.email === args.data.email)
+
+      if(emailToken) throw new Error('Email taken.')
+
+      const user = {
+        id: uuidv4(),
+        ...args.data
+      }
+
+      Users.push(user)
+
+      return user;
+    },
+	}
+}
 ```
+
+### GraphQL Gui
+
+```jsx
+mutation {
+  createUser(
+    data: {
+      name: "newFormat",
+      email: "new@gmail.com",
+      age :23
+    }
+  ) {
+    id
+    name
+    email 
+    age
+  }
+}
+```
+
+## Delete
+
+要注意 也需要把 relation 裡的 data delete掉
+
+```jsx
+type Mutation {
+	deleteUser(id: ID!): User!
+}
+```
+
+```jsx
+const resolvers = {
+	Mutation: {
+		deleteUser(parent, args, { db }, info) {
+		  const userIndex = Users.findIndex((user) => {
+	      return user.id === args.id;
+		  });
+		
+		  if (userIndex === -1) throw new Error("User not found");
+		
+		  /**
+		   * @deletedUsers: [ { id: '1', name: 'Wilker', email: 'wilker@gmail.com' }]
+		   */
+		  const deletedUsers = db.Users.splice(userIndex, 1);
+		
+		  db.Posts = db.Posts.filter((post) => {
+		    const match = post.author === args.id;
+		
+		    if (match)
+		      db.Comments = db.Comments.filter((comment) => comment.post !== post.id);
+		    return !match;
+		  });
+		
+		  db.Comments = db.Comments.filter((comment) => comment.author !== args.id);
+		
+		  return deletedUsers[0];
+		},
+	}
+}
+```
+
+## Update
+
+我們不要 用 `createXxxxInput` ，我們自己create 另外一個 `updateXxxxInput`
+
+因為 有些資料 我們在 create裡 是一定要填寫的 但是 在 update 不一樣
+
+`注意`  我們不需要 寫 relationship 的id 在 input裡， user 是不需要改這個的
+
+```jsx
+type Mutation {
+	createUser(data: CreateUserInput): User!
+	updateUser(id: ID!, data: UpdateUserInput!) :User!
+}
+
+input CreateUserInput {
+  name: String!
+  email: String!
+  age: Int
+}
+
+input UpdateUserInput {
+  name: String
+  email: String
+  age: Int
+}
+```
+
+用 `typeof` 是檢查user 有沒有 更新 這個 data， 因為 有的話 就會有string or boolean 什麼的
+
+```jsx
+ const resolver = {
+	Mutation: {
+		updateUser(parent, args, {db}, info) {
+	    const {id, data} = args;
+	    const user = db.Users.find(user => user.id === id);
+	    if(!user) return new Error("User not found");
+	
+	    if(typeof data.email === 'string') {
+	      const emailTaken = db.Users.some(user => user.email === data.email)
+	      if(emailTaken) throw new Error("Email taken");
+	
+	      user.email = data.email
+	    }
+	
+	    if(typeof data.name === "string") {
+	      user.name = data.name
+	    }
+	
+	    if(typeof data.age !== 'undefined') {
+	      user.age = data.age
+	    }
+	
+	    return user;
+	  },
+	}
+}
+```
+
+### GraphQL Gui
+
+```jsx
+mutation {
+  updateUser(
+    id: "1",
+    data: {
+      name: "Developer",
+      age: 12
+    }
+  ) {
+    id
+    name
+    email
+    age
+  }
+}
+```
+
+# Subscription
+
+## Basic
+
+```jsx
+// Subscription.js
+
+const Subscription = {
+ count: {
+    subscribe(parent, args, {pubsub}, info) {
+      let count = 0;
+
+      setInterval(() => {
+        count++
+				/*
+					publish("channel name", { value pass to client, Int type })
+					這個 一個 樣本 我們其實 是放在 create的地方 去 call 這個 pubsub 然後 send data 去 client， 如果 他們的 channel name 是一樣的話 就會被triggered
+				*/
+        pubsub.publish('count', {
+          count
+        })
+      }, 1000);
+
+      // register 監視器，裡面的string 是 channel name
+      return pubsub.asyncIterator('count')
+    }
+  }
+}
+
+export default Subscription;
+```
+
+```jsx
+import { GraphQLServer, PubSub } from "graphql-yoga";
+import Subscription from "./Subscription.js"
+
+const pubsub = new PubSub();
+
+const server = new GraphQLServer({
+  typeDefs: "./src/schema.graphql",
+  resolvers: {
+   Subscription,
+  },
+  context: {
+    db,
+    pubsub,
+  },
+});
+```
+
+subscription 裡的 count 就是 *Subscription.js* object 裡 count
+
+下面的 type Subscription 不像 Mutation or Query 一定要是 return 一個 object Type， 他也能 return Int
+
+```jsx
+type Subscription {
+  count: Int!
+}
+```
+
+## Subscription example
+
+comment 收一個 `postID` 就是說 只要 那個 post 是 match的 我們的 subscription 就會被trigger
+
+```jsx
+type Subscription {
+  comment(postId: ID!): Comment!
+}
+
+type Comment {
+  id: ID!
+  text: String!
+  author: User!
+  post: Post!
+}
+```
+
+```jsx
+const Subscription = {
+	comment: {
+    subscribe(parent, args, {db, pubsub}, info) {
+      const {postId} = args;
+      const post = db.Posts.find(post => post.id === postId && post.published);
+
+      if(!post) throw new Error("Post not found");
+			// 在這裡 register channel name
+      return pubsub.asyncIterator(`comment ${postId}`);
+
+    }
+  }
+}
+```
+
+```jsx
+const Mutation = {
+	createComment(parent, args, { db, pubsub }, info) {
+    const userExists = db.Users.some((u) => u.id === args.author);
+    const isPublished = db.Posts.some(
+      (p) => p.id === args.data.post && p.published === true
+    );
+
+    if (!userExists && !isPublished) throw new Error("Something going wrong");
+
+    const comment = {
+      id: uuidv4(),
+      ...args.data,
+    };
+
+    db.Comments.push(comment);
+		// 這個 會 去 match Subscription 的 channel name 一樣的話 就 trigger
+    pubsub.publish(`comment ${args.data.post}`, { comment })
+
+    return comment;
+  },
+}
+```
+
+### GraphQL Gui
+
+```jsx
+subscription {
+  comment(postId: "10") {
+    id
+    text
+    author {
+      name
+    }
+  }
+}
+```
+
+subscription 監視 `10`
+
+當 createComment裡的 post 是 10的話 我們的 subscription就會被trigger
+
+```jsx
+mutation {
+  createComment(
+    data: {
+      text: "Cool developer",
+      author: "1",
+      post: "10"
+    }
+  ) {
+    id
+    text 
+  }
+}
+```
+
+### Test
+
+```jsx
+/**
+
+  Goal: Create a subscription for new posts
+  1. Define "post" subscription. No arguements are necessary. Response should be a post object.
+  2. Setup the resolver for post. Since there are no args, a channel name like "post" is fine.
+  3. Modify the mutation for creating a post to publish the new post data.
+    - Only call pubsub.pubish if the post had "published" set to true.
+    - Don't worry about updatePost or deletePost.
+*/
+```
+
+1. Go to schema.graphql
+
+```jsx
+type Subscription {
+  post: Post!
+}
+
+type Post {
+  id: ID!
+  title: String!
+  body: String!
+  published: Boolean!
+  author: User!
+  comments: [Comment!]!
+}
+```
+
+1. 
+
+```jsx
+// Subscription.js
+const Subscription = {
+	post: {
+    subscribe(parent, args, {db, pubsub}, info) {
+      return pubsub.asyncIterator('post');
+    }
+  }
+}
+```
+
+1. 
+
+```jsx
+// Mutation.js
+const Mutation = {
+	createPost(parent, args, { db, pubsub }, info) {
+    const userExists = db.Users.some((u) => u.id === args.data.author);
+    if (!userExists) throw new Error("User not found");
+
+    const post = {
+      id: uuidv4(),
+      ...args.data,
+    };
+
+    db.Posts.push(post);
+
+    // add this for subscription
+    if (args.data.published) {
+      pubsub.publish("post", {post}); 
+    }
+
+    return post;
+  },
+}
+```
+
+Graphql Gui
+
+```jsx
+subscription {
+  post {
+    id
+    title
+    body
+    author {
+      id
+      name
+    }
+  }
+}
+```
+
