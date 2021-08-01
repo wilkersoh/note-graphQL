@@ -1,5 +1,14 @@
 import { v4 as uuidv4 } from "uuid";
 
+/**
+  Setup Created, Updated, Deleted for comment subscription
+  1. Set up a custom payload type forcomment subscription with "mutation" and "data"
+  2. Update publish call in createComment to send back CREATED with the data
+  3. Add publish call in deleteComment using DELTED event
+  4. Add publish call in updateCommnet using UPDATED event
+  5. Test your work by creating, updating and deleting a comment
+ */
+
 const Mutation = {
   createUser(parent, args, { db }, info) {
     const emailToken = db.Users.some((u) => u.email === args.data.email);
@@ -74,31 +83,95 @@ const Mutation = {
     db.Posts.push(post);
 
     if (args.data.published) {
-      pubsub.publish("post", {post});
+      pubsub.publish("post", {
+        post: {
+          mutation: "CREATED",
+          data: post,
+        },
+      });
     }
 
     return post;
   },
-  deletePost(parent, args, { db }) {
+  deletePost(parent, args, { db, pubsub }) {
     const postIndex = db.Posts.findIndex((p) => p.id === args.id);
 
     if (postIndex <= -1) throw new Error("Post not found");
 
-    const deletePosts = db.Posts.splice(postIndex, 1);
+    const [post] = db.Posts.splice(postIndex, 1);
 
     db.Comments = db.Comments.filter((c) => c.post !== args.id);
 
-    return deletePosts[0];
+    if (post.published) {
+      pubsub.publish("post", {
+        post: {
+          mutation: "DELETED",
+          data: post,
+        },
+      });
+    }
+
+    return post;
   },
-  updatePost(parent, args, { db }, info) {
+  updatePost(parent, args, { db, pubsub }, info) {
     const { id, data } = args;
     const post = db.Posts.find((post) => post.id === id);
+
+    const originalPost = { ...post };
 
     if (!post) throw new Error("Post not found");
 
     if (typeof data.title === "string") post.title = data.title;
     if (typeof data.body === "string") post.body = data.body;
-    if (typeof data.published === "boolean") post.published = data.published;
+    if (typeof data.published === "boolean") {
+      post.published = data.published;
+
+      if (originalPost.published === true && !post.published) {
+        // deleted
+        /**
+         * how to trigger delete in playgorund
+         * 1. update published value to false
+         *
+         * User update published to fasle
+         */
+        console.log("------ Delete -----");
+        pubsub.publish("post", {
+          post: {
+            mutation: "DELETED",
+            data: originalPost, // old data
+          },
+        });
+      } else if (!originalPost.published === false && post.published) {
+        // created
+        /**
+         * how to trigger create in playgorund
+         * 1. update published value to true
+         *
+         * User update published to true
+         */
+        console.log("------ CREATE -----");
+        pubsub.publish("post", {
+          post: {
+            mutation: "CREATED",
+            data: post, // latest data
+          },
+        });
+      }
+    } else if (post.published) {
+      // updated
+      /**
+       * how to trigger update in playgorund
+       * 1. Cannot update the published value and it must be true
+       * 2. update the body
+       */
+      console.log("------ Update -----");
+      pubsub.publish("post", {
+        post: {
+          mutation: "UPDATED",
+          data: post,
+        },
+      });
+    }
 
     return post;
   },
@@ -116,25 +189,44 @@ const Mutation = {
     };
 
     db.Comments.push(comment);
-    pubsub.publish(`comment ${args.data.post}`, { comment });
+    pubsub.publish(`comment ${args.data.post}`, {
+      comment: {
+        mutation: "CREATED",
+        data: comment
+      }
+    });
 
     return comment;
   },
-  deleteComment(parent, args, { db }) {
+  deleteComment(parent, args, { db, pubsub }) {
     const commentIndex = db.Comments.findIndex((c) => c.id === args.id);
 
     if (commentIndex === -1) throw new Error("Comment not found");
 
-    const deleteComments = db.Comments.splice(commentIndex, 1);
+    const [deleteComment] = db.Comments.splice(commentIndex, 1);
 
-    return deleteComments[0];
+    pubsub.publish(`comment ${deleteComment.post}`, {
+      comment: {
+        mutation: "DELETED",
+        data: deleteComment
+      }
+    })
+
+    return deleteComment;
   },
-  updateComment(parent, args, { db }, info) {
+  updateComment(parent, args, { db, pubsub }, info) {
     const { id, data } = args;
     const comment = db.Comments.find((comment) => comment.id === id);
     if (!comment) throw new Error("Comment not found");
 
     if (typeof data.text === "string") comment.text = data.text;
+
+    pubsub.publish(`comment ${comment.post}`, {
+      comment: {
+        mutation: "UPADTED",
+        data: comment
+      }
+    })
 
     return comment;
   },
