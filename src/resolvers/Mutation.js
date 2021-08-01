@@ -1,14 +1,5 @@
 import { v4 as uuidv4 } from "uuid";
 
-/**
-  Setup Created, Updated, Deleted for comment subscription
-  1. Set up a custom payload type forcomment subscription with "mutation" and "data"
-  2. Update publish call in createComment to send back CREATED with the data
-  3. Add publish call in deleteComment using DELTED event
-  4. Add publish call in updateCommnet using UPDATED event
-  5. Test your work by creating, updating and deleting a comment
- */
-
 const Mutation = {
   createUser(parent, args, { db }, info) {
     const emailToken = db.Users.some((u) => u.email === args.data.email);
