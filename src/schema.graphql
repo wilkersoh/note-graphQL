@@ -60,6 +60,7 @@ input UpdateCommentInput {
 
 type User {
   id: ID!
+  uuid: String!
   name: String!
   email: String!
   age: Int

@@ -1,41 +1,41 @@
 const Query = {
-  users(parent, args, { db }, info) {
-    if (!args.query) return db.Users;
+  async users(parent, args, { prisma }, info) {
+    if (!args.query) return await prisma.user.findMany({});
 
-    return db.Users.filter((user) => {
-      return user.name.toLowerCase().includes(args.query.toLowerCase());
+    const users = await prisma.user.findMany({
+      where: {
+        name: {
+          equals: args.query
+        },
+      },
     });
+
+    return users;
   },
-  posts(parent, args, { db }, info) {
-    if (!args.query) return db.Posts;
-
-    return db.Posts.filter((post) => {
-      const isTitleMatch = post.title
-        .toLowerCase()
-        .includes(args.query.toLowerCase());
-      const isBodyMatch = post.body
-        .toLowerCase()
-        .includes(args.query.toLowerCase());
-
-      return isTitleMatch || isBodyMatch;
+  async posts(parent, args, { prisma }, info) {
+    if (!args.query) return await prisma.post.findMany();
+    const posts = await prisma.post.findMany({
+      where: {
+        OR: [
+          {
+            title: {
+              contains: args.query,
+              mode: "insensitive"
+            },
+          },
+          {
+            body: {
+              contains: args.query,
+              mode: "insensitive"
+            }
+          }
+        ]
+      },
     });
+
+    return posts;
   },
-  me() {
-    return {
-      id: "1234",
-      name: "Wilker",
-      age: 21,
-    };
-  },
-  post() {
-    return {
-      id: "551",
-      title: "Graphql 001",
-      body: "",
-      published: false,
-    };
-  },
-  comments(parent, args, {db}) {
+  comments(parent, args, { db }) {
     return db.Comments;
   },
 };

@@ -1,3 +1,11 @@
+# How to start
+1. yarn install
+2. yarn start
+3. npx prisma studio
+
+# Pending
+1. Heroku Cloud server to store data (already setup postgres)
+
 > package.json
 - --ext [js, graphql] are add other js to watch in nodemon
 
@@ -49,7 +57,7 @@ graphql playground serve in localhost:4000
 ## Only Single endpoint
 
 ```jsx
-// default 
+// default
 http://localhost:4000
 ```
 
@@ -93,7 +101,7 @@ const typeDefs = `
 const typeDefs = `
 	type Query {
 		users(name: String): [User!]!
-	}	
+	}
 `;
 ```
 
@@ -103,7 +111,7 @@ const typeDefs = `
 const resolvers = {
 	Query: { // 是對應 number 2 裡 Query的 fn 名
 		users(parent, args, ctx, info) {
-			
+
 		}
 	}
 }
@@ -119,7 +127,7 @@ const typeDefs = `
 			posts: [Post!]!
 	}
 	type Post {
-		id 
+		id
 		title
 	}
 `;
@@ -454,7 +462,7 @@ const resolvers = {
 	User: { // 一定要是User 這個type User 下面有 posts
 		posts(parent, args, ctx, info) { // posts 是對應 posts: [Posts!]的posts
       return Posts.filter((post) => {
-        return post.author === parent.id 
+        return post.author === parent.id
       })
     }
 	}
@@ -590,7 +598,7 @@ const resolvers = {
 	Query:{},
 	Mutation: {
 		createUser(parent, args, ctx, info) {
-			
+
 		}
 	}
 }
@@ -673,9 +681,9 @@ const typeDefs = `
 	type Mutation {
     createUser(data: CreateUserInput): User!
 	}
-	
+
 	input CreateUserInput {
-    name: String! 
+    name: String!
     email: String!
     age: Int
   }
@@ -719,7 +727,7 @@ mutation {
   ) {
     id
     name
-    email 
+    email
     age
   }
 }
@@ -742,24 +750,24 @@ const resolvers = {
 		  const userIndex = Users.findIndex((user) => {
 	      return user.id === args.id;
 		  });
-		
+
 		  if (userIndex === -1) throw new Error("User not found");
-		
+
 		  /**
 		   * @deletedUsers: [ { id: '1', name: 'Wilker', email: 'wilker@gmail.com' }]
 		   */
 		  const deletedUsers = db.Users.splice(userIndex, 1);
-		
+
 		  db.Posts = db.Posts.filter((post) => {
 		    const match = post.author === args.id;
-		
+
 		    if (match)
 		      db.Comments = db.Comments.filter((comment) => comment.post !== post.id);
 		    return !match;
 		  });
-		
+
 		  db.Comments = db.Comments.filter((comment) => comment.author !== args.id);
-		
+
 		  return deletedUsers[0];
 		},
 	}
@@ -802,22 +810,22 @@ input UpdateUserInput {
 	    const {id, data} = args;
 	    const user = db.Users.find(user => user.id === id);
 	    if(!user) return new Error("User not found");
-	
+
 	    if(typeof data.email === 'string') {
 	      const emailTaken = db.Users.some(user => user.email === data.email)
 	      if(emailTaken) throw new Error("Email taken");
-	
+
 	      user.email = data.email
 	    }
-	
+
 	    if(typeof data.name === "string") {
 	      user.name = data.name
 	    }
-	
+
 	    if(typeof data.age !== 'undefined') {
 	      user.age = data.age
 	    }
-	
+
 	    return user;
 	  },
 	}
@@ -988,7 +996,7 @@ mutation {
     }
   ) {
     id
-    text 
+    text
   }
 }
 ```
@@ -1024,7 +1032,7 @@ type Post {
 }
 ```
 
-1. 
+1.
 
 ```jsx
 // Subscription.js
@@ -1037,7 +1045,7 @@ const Subscription = {
 }
 ```
 
-1. 
+1.
 
 ```jsx
 // Mutation.js
@@ -1055,7 +1063,7 @@ const Mutation = {
 
     // add this for subscription
     if (args.data.published) {
-      pubsub.publish("post", {post}); 
+      pubsub.publish("post", {post});
     }
 
     return post;

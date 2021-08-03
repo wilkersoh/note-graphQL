@@ -10,9 +10,11 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@prisma/client": "^2.28.0",
     "babel-cli": "6.26.0",
     "babel-preset-env": "1.7.0",
     "graphql-yoga": "1.16.7",
+    "prisma": "2.28.0",
     "uuid": "^8.3.2"
   },
   "devDependencies": {
