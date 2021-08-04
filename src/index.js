@@ -36,7 +36,6 @@ const server = new GraphQLServer({
     Comment,
   },
   context: {
-    // db,
     prisma,
     pubsub,
   },

@@ -41,11 +41,12 @@ const Mutation = {
       });
 
       const transaction = await prisma.$transaction([deletePosts, deleteUser]);
-      console.log("transaction :>> ", transaction);
+
       // transaction[0] > {count: numberOfPost}
       return transaction[1];
     } catch (error) {
       console.log("error: ", error);
+      return error;
     }
 
     // const userIndex = Users.findIndex((user) => {
@@ -73,9 +74,7 @@ const Mutation = {
     // return deletedUsers[0];
   },
   async updateUser(parent, args, { prisma }, info) {
-    console.log("args :>> ", args.data);
     const { name, email, age } = args.data;
-    // console.log('name: :>> ', name);
     try {
       // check user
       const hasUser = await prisma.user.findUnique({
@@ -86,7 +85,7 @@ const Mutation = {
 
       if (!hasUser) throw new Error("User not found");
 
-      // check email adn user
+      // check email is it exist
       const hasEmail = await prisma.user.findUnique({
         where: {
           email,
@@ -108,7 +107,6 @@ const Mutation = {
       });
       return user;
     } catch (error) {
-      console.log("error :>> ", error);
       return error;
     }
   },
@@ -148,31 +146,68 @@ const Mutation = {
 
       return post;
     } catch (error) {
-      console.log("error :: > ", error);
+      return error
     }
   },
-  deletePost(parent, args, { db, pubsub }) {
-    const postIndex = db.Posts.findIndex((p) => p.id === args.id);
-
-    if (postIndex <= -1) throw new Error("Post not found");
-
-    const [post] = db.Posts.splice(postIndex, 1);
-
-    db.Comments = db.Comments.filter((c) => c.post !== args.id);
-
-    if (post.published) {
-      pubsub.publish("post", {
-        post: {
-          mutation: "DELETED",
-          data: post,
+  async deletePost(parent, args, { prisma, pubsub }) {
+    try {
+      const deletePost = await prisma.post.delete({
+        where: {
+          id: +args.id,
         },
       });
+
+      if (deletePost.published) {
+        pubsub.publish("post", {
+          post: {
+            mutation: "DELETED",
+            data: deletePost,
+          },
+        });
+      }
+
+      return deletePost;
+    } catch (error) {
+      return error;
+    }
+    // const postIndex = db.Posts.findIndex((p) => p.id === args.id);
+
+    // if (postIndex <= -1) throw new Error("Post not found");
+
+    // const [post] = db.Posts.splice(postIndex, 1);
+
+    // db.Comments = db.Comments.filter((c) => c.post !== args.id);
+
+    // if (post.published) {
+    //   pubsub.publish("post", {
+    //     post: {
+    //       mutation: "DELETED",
+    //       data: post,
+    //     },
+    //   });
+    // }
+
+    // return post;
+  },
+  async updatePost(parent, args, { prisma, db, pubsub }, info) {
+
+    try {
+      const post = await prisma.post.update({
+        where: {
+          id: +args.id
+        },
+        data: args.data
+      })
+
+      if(post.published) {
+
+      }
+
+      return post;
+    } catch (error) {
+      return error;
     }
 
-    return post;
-  },
-  updatePost(parent, args, { db, pubsub }, info) {
-    const { id, data } = args;
     const post = db.Posts.find((post) => post.id === id);
 
     const originalPost = { ...post };
@@ -233,28 +268,59 @@ const Mutation = {
 
     return post;
   },
-  createComment(parent, args, { db, pubsub }, info) {
-    const userExists = db.Users.some((u) => u.id === args.author);
-    const isPublished = db.Posts.some(
-      (p) => p.id === args.data.post && p.published === true
-    );
+  async createComment(parent, args, { prisma, pubsub }, info) {
+    const {text, author, post} = args.data
+    try {
+      const comment = await prisma.comment.create({
+        data: {
+          uuid: uuidv4(),
+          text,
+          author: {
+            connect: {
+              id: +author,
+            },
+          },
+          post: {
+            connect: {
+              id: +post,
+            },
+          },
+        },
+      });
 
-    if (!userExists && !isPublished) throw new Error("Something going wrong");
+      pubsub.publish(`comment ${args.data.post}`, {
+        comment: {
+          mutation: "CREATED",
+          data: comment,
+        },
+      });
 
-    const comment = {
-      id: uuidv4(),
-      ...args.data,
-    };
+      return comment;
+    } catch (error) {
+      return error;
+    }
 
-    db.Comments.push(comment);
-    pubsub.publish(`comment ${args.data.post}`, {
-      comment: {
-        mutation: "CREATED",
-        data: comment,
-      },
-    });
+    // const userExists = db.Users.some((u) => u.id === args.author);
+    // const isPublished = db.Posts.some(
+    //   (p) => p.id === args.data.post && p.published === true
+    // );
 
-    return comment;
+    // if (!userExists && !isPublished) throw new Error("Something going wrong");
+
+    // const comment = {
+    //   id: uuidv4(),
+    //   ...args.data,
+    // };
+
+    // db.Comments.push(comment);
+    // pubsub.publish(`comment ${args.data.post}`, {
+    //   comment: {
+    //     mutation: "CREATED",
+    //     data: comment,
+    //   },
+    // });
+
+    // return comment;
   },
   deleteComment(parent, args, { db, pubsub }) {
     const commentIndex = db.Comments.findIndex((c) => c.id === args.id);

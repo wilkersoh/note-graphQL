@@ -1,7 +1,6 @@
 const Query = {
   async users(parent, args, { prisma }, info) {
     if (!args.query) return await prisma.user.findMany({});
-
     const users = await prisma.user.findMany({
       where: {
         name: {
@@ -35,8 +34,12 @@ const Query = {
 
     return posts;
   },
-  comments(parent, args, { db }) {
-    return db.Comments;
+  async comments(parent, args, { prisma }) {
+    const comments = await prisma.comment.findMany()
+    console.log('comments :>> ', comments);
+    return comments
+
+    // return db.Comments;
   },
 };
 

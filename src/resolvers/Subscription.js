@@ -1,10 +1,18 @@
 const Subscription = {
   comment: {
-    subscribe(parent, args, { db, pubsub }, info) {
+    async subscribe(parent, args, { prisma, db, pubsub }, info) {
       const { postId } = args;
-      const post = db.Posts.find(
-        (post) => post.id === postId && post.published
-      );
+      const post = await prisma.post.findMany({
+        where: {
+          id: +args.postId,
+          published: true
+        },
+      });
+
+
+      // const post = db.Posts.find(
+      //   (post) => post.id === postId && post.published
+      // );
 
       if (!post) throw new Error("Post not found");
 

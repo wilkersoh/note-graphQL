@@ -18,6 +18,7 @@ model User {
   email       String @unique
   age         Int
   posts       Post[]
+  comments    Comment[]
 }
 
 model Post {
@@ -28,5 +29,17 @@ model Post {
   body        String
   published   Boolean @default(false)
   userId      Int
-  user         User   @relation(fields: [userId], references: [id])
+  user        User   @relation(fields: [userId], references: [id])
+  comments    Comment[]
+}
+
+model Comment {
+  @@map(name: "comments")
+  id          Int @id @default(autoincrement())
+  uuid        String @default(uuid()) @unique
+  text        String
+  authorId    Int
+  postId      Int
+  author      User    @relation(fields: [authorId], references: [id])
+  post        Post    @relation(fields: [postId], references: [id])
 }
