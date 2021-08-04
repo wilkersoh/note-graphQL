@@ -8,7 +8,6 @@
 
 > package.json
 - --ext [js, graphql] are add other js to watch in nodemon
-
 - [GraphQL](#graphql)
   * [Folder Location](#folder-location)
   * [Only Single endpoint](#only-single-endpoint)
@@ -40,6 +39,16 @@
   * [Subscription example](#subscription-example)
     + [GraphQL Gui](#graphql-gui-6)
     + [Test](#test)
+    + [GraphQL Gui](#graphql-gui-7)
+  * [Edit or Deletion for subscription](#edit-or-deletion-for-subscription)
+    + [GraphQL Gui [Create]](#graphql-gui--create-)
+    + [return data in Subscription after created new post](#return-data-in-subscription-after-created-new-post)
+    + [GraphQL Gui [delete]](#graphql-gui--delete-)
+    + [GraphQL Gui [Update]](#graphql-gui--update-)
+  * [Test](#test-1)
+    + [GraphQL Gui](#graphql-gui-8)
+- [Enum](#enum)
+
 
 # GraphQL
 
@@ -57,7 +66,7 @@ graphql playground serve in localhost:4000
 ## Only Single endpoint
 
 ```jsx
-// default
+// default 
 http://localhost:4000
 ```
 
@@ -101,7 +110,7 @@ const typeDefs = `
 const typeDefs = `
 	type Query {
 		users(name: String): [User!]!
-	}
+	}	
 `;
 ```
 
@@ -111,7 +120,7 @@ const typeDefs = `
 const resolvers = {
 	Query: { // 是對應 number 2 裡 Query的 fn 名
 		users(parent, args, ctx, info) {
-
+			
 		}
 	}
 }
@@ -127,7 +136,7 @@ const typeDefs = `
 			posts: [Post!]!
 	}
 	type Post {
-		id
+		id 
 		title
 	}
 `;
@@ -276,7 +285,7 @@ const resolvers = {
 
 ### GraphQL Gui
 
-```jsx
+```graphql
 query {
   greeting(name: "Wilker")
 }
@@ -314,7 +323,7 @@ const resolvers = {
 
 ### GraphQL Gui
 
-```jsx
+```graphql
 query {
   grades
 	add(numbers: [10, 50, 20.2])
@@ -375,7 +384,7 @@ const resolvers = {
 
 ### GraphQL Gui
 
-```jsx
+```graphql
 query {
 	users(query: 'W') {
 		id
@@ -462,7 +471,7 @@ const resolvers = {
 	User: { // 一定要是User 這個type User 下面有 posts
 		posts(parent, args, ctx, info) { // posts 是對應 posts: [Posts!]的posts
       return Posts.filter((post) => {
-        return post.author === parent.id
+        return post.author === parent.id 
       })
     }
 	}
@@ -558,7 +567,7 @@ const resolvers = {
 
 ### GraphQL Gui with relation
 
-```jsx
+```graphql
 query {
 	posts {
 		id
@@ -598,7 +607,7 @@ const resolvers = {
 	Query:{},
 	Mutation: {
 		createUser(parent, args, ctx, info) {
-
+			
 		}
 	}
 }
@@ -608,7 +617,7 @@ const resolvers = {
 
 name id email 是 create 後 要return的東西
 
-```jsx
+```graphql
 mutation {
   createUser(name: "TesterDev", email: "testdev@gmail.com") {
 	  id
@@ -620,7 +629,7 @@ mutation {
 
 先create query先才做mutation， 因為 relation的關係 如：
 
-```jsx
+```graphql
 type Mutation {
     createUser(name: String!, email: String!, age: Int): User!
     createPost(title: String!, body: String!, published: Boolean!, author: ID!): Post!
@@ -668,7 +677,7 @@ const resolvers = {
 
 previous version
 
-```jsx
+```graphql
 type Mutation {
     createUser(name: String!, email: String!, age: Int): User!
 }
@@ -681,9 +690,9 @@ const typeDefs = `
 	type Mutation {
     createUser(data: CreateUserInput): User!
 	}
-
+	
 	input CreateUserInput {
-    name: String!
+    name: String! 
     email: String!
     age: Int
   }
@@ -716,7 +725,7 @@ const resolvers = {
 
 ### GraphQL Gui
 
-```jsx
+```graphql
 mutation {
   createUser(
     data: {
@@ -727,7 +736,7 @@ mutation {
   ) {
     id
     name
-    email
+    email 
     age
   }
 }
@@ -737,7 +746,7 @@ mutation {
 
 要注意 也需要把 relation 裡的 data delete掉
 
-```jsx
+```graphql
 type Mutation {
 	deleteUser(id: ID!): User!
 }
@@ -750,24 +759,24 @@ const resolvers = {
 		  const userIndex = Users.findIndex((user) => {
 	      return user.id === args.id;
 		  });
-
+		
 		  if (userIndex === -1) throw new Error("User not found");
-
+		
 		  /**
 		   * @deletedUsers: [ { id: '1', name: 'Wilker', email: 'wilker@gmail.com' }]
 		   */
 		  const deletedUsers = db.Users.splice(userIndex, 1);
-
+		
 		  db.Posts = db.Posts.filter((post) => {
 		    const match = post.author === args.id;
-
+		
 		    if (match)
 		      db.Comments = db.Comments.filter((comment) => comment.post !== post.id);
 		    return !match;
 		  });
-
+		
 		  db.Comments = db.Comments.filter((comment) => comment.author !== args.id);
-
+		
 		  return deletedUsers[0];
 		},
 	}
@@ -782,7 +791,7 @@ const resolvers = {
 
 `注意`  我們不需要 寫 relationship 的id 在 input裡， user 是不需要改這個的
 
-```jsx
+```graphql
 type Mutation {
 	createUser(data: CreateUserInput): User!
 	updateUser(id: ID!, data: UpdateUserInput!) :User!
@@ -810,22 +819,22 @@ input UpdateUserInput {
 	    const {id, data} = args;
 	    const user = db.Users.find(user => user.id === id);
 	    if(!user) return new Error("User not found");
-
+	
 	    if(typeof data.email === 'string') {
 	      const emailTaken = db.Users.some(user => user.email === data.email)
 	      if(emailTaken) throw new Error("Email taken");
-
+	
 	      user.email = data.email
 	    }
-
+	
 	    if(typeof data.name === "string") {
 	      user.name = data.name
 	    }
-
+	
 	    if(typeof data.age !== 'undefined') {
 	      user.age = data.age
 	    }
-
+	
 	    return user;
 	  },
 	}
@@ -834,7 +843,7 @@ input UpdateUserInput {
 
 ### GraphQL Gui
 
-```jsx
+```graphql
 mutation {
   updateUser(
     id: "1",
@@ -905,7 +914,7 @@ subscription 裡的 count 就是 *Subscription.js* object 裡 count
 
 下面的 type Subscription 不像 Mutation or Query 一定要是 return 一個 object Type， 他也能 return Int
 
-```jsx
+```graphql
 type Subscription {
   count: Int!
 }
@@ -914,6 +923,8 @@ type Subscription {
 ## Subscription example
 
 comment 收一個 `postID` 就是說 只要 那個 post 是 match的 我們的 subscription 就會被trigger
+
+這裡面的 `Cooment！` 下面會改變 這個只是一個簡單的例子
 
 ```jsx
 type Subscription {
@@ -970,7 +981,7 @@ const Mutation = {
 
 ### GraphQL Gui
 
-```jsx
+```graphql
 subscription {
   comment(postId: "10") {
     id
@@ -986,7 +997,7 @@ subscription 監視 `10`
 
 當 createComment裡的 post 是 10的話 我們的 subscription就會被trigger
 
-```jsx
+```graphql
 mutation {
   createComment(
     data: {
@@ -996,7 +1007,7 @@ mutation {
     }
   ) {
     id
-    text
+    text 
   }
 }
 ```
@@ -1017,7 +1028,7 @@ mutation {
 
 1. Go to schema.graphql
 
-```jsx
+```graphql
 type Subscription {
   post: Post!
 }
@@ -1032,7 +1043,7 @@ type Post {
 }
 ```
 
-1.
+1. 
 
 ```jsx
 // Subscription.js
@@ -1045,7 +1056,7 @@ const Subscription = {
 }
 ```
 
-1.
+1. 
 
 ```jsx
 // Mutation.js
@@ -1063,7 +1074,7 @@ const Mutation = {
 
     // add this for subscription
     if (args.data.published) {
-      pubsub.publish("post", {post});
+      pubsub.publish("post", {post}); 
     }
 
     return post;
@@ -1071,9 +1082,10 @@ const Mutation = {
 }
 ```
 
-Graphql Gui
+### GraphQL Gui
 
-```jsx
+```graphql
+// trigger this before create new comment
 subscription {
   post {
     id
@@ -1087,3 +1099,325 @@ subscription {
 }
 ```
 
+```graphql
+mutation {
+  createComment(
+    data: {
+      text: "Cool developer",
+      author: "1",
+      post: "10"
+    }
+  ) {
+    id
+    text 
+  }
+}
+```
+
+## Edit or Deletion for subscription
+
+1.  在 graphql.scheme 更改subscription裡post return的 資料, 因為我們更改還是 delete 我們需要給 client 不同的 data，所以我們不能直接 return 整個post object to client
+
+```graphql
+type Subscription {
+  post: PostSubscriptionPayload!
+}
+
+type PostSubscriptionPayload {
+  mutation: String!
+  data: Post!
+}
+```
+
+在mutation裡，原本是這樣的, 我們 return post data object 去 client 但是 現在 我們換去 return object { mutation, data } 了， 所以我們需要更改
+
+```jsx
+createPost(parent, args, { db, pubsub }, info) {
+    const userExists = db.Users.some((u) => u.id === args.data.author);
+    if (!userExists) throw new Error("User not found");
+
+    const post = {
+      id: uuidv4(),
+      ...args.data,
+    };
+
+    db.Posts.push(post);
+
+    if (args.data.published) {
+      //pubsub.publish("post", {post});
+      pubsub.publish("post", {
+				post: {
+					mutation: 'CREATED',
+					data: post,	
+        }
+      })
+    }
+
+    return post;
+  },
+```
+
+### GraphQL Gui [Create]
+
+```graphql
+// trigger this before create new post
+subscription {
+  post {
+		mutation
+    data {
+      id
+      title
+      body
+      author {
+        id
+        name
+      }
+    }
+  }
+}
+```
+
+```graphql
+mutation {
+  createPost(data: {
+    title: "new wilker post",
+    body: "",
+    published: true,
+    author:"3"
+  }) {
+    id
+    title
+  	published
+  }
+}
+```
+
+### return data in Subscription after created new post
+
+```jsx
+{
+  "data": {
+    "post": {
+      "mutation": "CREATED",
+      "data": {
+        "id": "60a00c55-9bad-4ca4-a2c3-4609abf75aa8",
+        "title": "new wilker post",
+        "body": "",
+        "author": {
+          "id": "3",
+          "name": "self"
+        }
+      }
+    }
+  }
+}
+```
+
+### GraphQL Gui [delete]
+
+```jsx
+const Mutation = {
+  deletePost(parent, args, { db, pubsub }) {
+    const postIndex = db.Posts.findIndex((p) => p.id === args.id);
+
+    if (postIndex <= -1) throw new Error("Post not found");
+
+    const [post] = db.Posts.splice(postIndex, 1);
+
+    db.Comments = db.Comments.filter((c) => c.post !== args.id);
+
+    if(post.published) {
+      pubsub.publish('post', {
+        post: {
+          mutation: "DELETED",
+          data: post
+        }
+      })
+    }
+
+    return post;
+  }
+}
+```
+
+```graphql
+subscription {
+  post {
+		mutation
+    data {
+      id
+      title
+      body
+      author {
+        id
+        name
+      }
+    }
+  }
+}
+```
+
+```graphql
+mutation {
+  deletePost(id: "10") {
+    title
+    id
+  }
+}
+```
+
+```jsx
+// result 
+{
+  "data": {
+    "post": {
+      "mutation": "DELETED",
+      "data": {
+        "id": "10",
+        "title": "GraphqL 100",
+        "body": "",
+        "author": {
+          "id": "1",
+          "name": "Wilker"
+        }
+      }
+    }
+  }
+}
+```
+
+### GraphQL Gui [Update]
+
+```jsx
+const Mutation = {
+	
+}
+```
+
+## Test
+
+```jsx
+/**
+  Setup Created, Updated, Deleted for comment subscription
+  1. Set up a custom payload type forcomment subscription with "mutation" and "data"
+  2. Update publish call in createComment to send back CREATED with the data
+  3. Add publish call in deleteComment using DELTED event
+  4. Add publish call in updateCommnet using UPDATED event
+  5. Test your work by creating, updating and deleting a comment
+ */
+```
+
+1. Create type of subscription
+
+```graphql
+type Subscription {
+  comment(postId: ID!): CommentSubscriptionPayload!
+}
+
+type CommentSubscriptionPayload {
+  mutation: String!
+  data: Comment!
+}
+```
+
+1. Create publish with comment object 
+
+```jsx
+createComment(parent, args, { db, pubsub }, info) {
+    const userExists = db.Users.some((u) => u.id === args.author);
+    const isPublished = db.Posts.some(
+      (p) => p.id === args.data.post && p.published === true
+    );
+
+    if (!userExists && !isPublished) throw new Error("Something going wrong");
+
+    const comment = {
+      id: uuidv4(),
+      ...args.data,
+    };
+
+    db.Comments.push(comment);
+    pubsub.publish(`comment ${args.data.post}`, {
+      comment: {
+        mutation: "CREATED",
+        data: comment
+      }
+    });
+
+    return comment;
+  },
+```
+
+1. 記得 channel name 是 `comment [postID]`
+
+```jsx
+deleteComment(parent, args, { db, pubsub }) {
+    const commentIndex = db.Comments.findIndex((c) => c.id === args.id);
+
+    if (commentIndex === -1) throw new Error("Comment not found");
+
+    const [deleteComment] = db.Comments.splice(commentIndex, 1);
+
+    pubsub.publish(`comment ${deleteComment.post}`, {
+      comment: {
+        mutation: "DELETED",
+        data: deleteComment
+      }
+    })
+
+    return deleteComment;
+  },
+```
+
+### GraphQL Gui
+
+1. Go to trigger subscription comment
+2. Go to createComment
+3. Copy Created id in subscroption comment after createComment
+4. Use copy ID to updateComment
+5. Use CopyID to deleteComment
+
+```graphql
+subscription {
+  comment(postId: "10") {
+		mutation
+    data {
+      id	
+      text
+      author {
+        id
+        name
+      }
+    }
+  }
+}
+```
+
+# Enum
+
+之前版本
+
+```graphql
+
+type CommentSubscriptionPayload {
+  mutation: String!
+  data: Comment!
+}
+
+```
+
+Enum 版本 - 好處 容易 catch typo
+
+```graphql
+type CommentSubscriptionPayload {
+  mutation: MutationType!
+  data: Comment!
+}
+
+enum MutationType {
+  CREATED
+  UPADTE
+  DELETED
+}
+
+```
