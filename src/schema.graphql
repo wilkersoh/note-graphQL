@@ -96,6 +96,6 @@ type CommentSubscriptionPayload {
 
 enum MutationType {
   CREATED
-  UPADTE
+  UPADTED
   DELETED
 }

@@ -1,3 +1,4 @@
+import { prisma } from "@prisma/client";
 import { v4 as uuidv4 } from "uuid";
 
 const Mutation = {
@@ -322,37 +323,48 @@ const Mutation = {
 
     // return comment;
   },
-  deleteComment(parent, args, { db, pubsub }) {
-    const commentIndex = db.Comments.findIndex((c) => c.id === args.id);
+  async deleteComment(parent, args, { prisma, pubsub }) {
+    try {
+      const deleteComment = await prisma.comment.delete({
+        where: {
+          id: +args.id,
+        },
+      });
 
-    if (commentIndex === -1) throw new Error("Comment not found");
+      pubsub.publish(`comment ${deleteComment.postId}`, {
+        comment: {
+          mutation: "DELETED",
+          data: deleteComment,
+        },
+      });
 
-    const [deleteComment] = db.Comments.splice(commentIndex, 1);
-
-    pubsub.publish(`comment ${deleteComment.post}`, {
-      comment: {
-        mutation: "DELETED",
-        data: deleteComment,
-      },
-    });
-
-    return deleteComment;
+      return deleteComment;
+    } catch (error) {
+      return error;
+    }
   },
-  updateComment(parent, args, { db, pubsub }, info) {
-    const { id, data } = args;
-    const comment = db.Comments.find((comment) => comment.id === id);
-    if (!comment) throw new Error("Comment not found");
+  async updateComment(parent, args, { prisma, pubsub }, info) {
+    try {
+      const comment = await prisma.comment.update({
+        where: {
+          id: +args.id,
+        },
+        data: {
+          ...args.data,
+        },
+      });
+      pubsub.publish(`comment ${comment.postId}`, {
+        comment: {
+          mutation: "UPADTED",
+          data: comment,
+        },
+      });
 
-    if (typeof data.text === "string") comment.text = data.text;
+      return comment;
 
-    pubsub.publish(`comment ${comment.post}`, {
-      comment: {
-        mutation: "UPADTED",
-        data: comment,
-      },
-    });
-
-    return comment;
+    } catch (error) {
+      return error;
+    }
   },
 };
 

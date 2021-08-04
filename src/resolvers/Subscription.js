@@ -15,7 +15,7 @@ const Subscription = {
       // );
 
       if (!post) throw new Error("Post not found");
-
+      console.log('postId in subscribe :>> ', postId);
       return pubsub.asyncIterator(`comment ${postId}`);
     },
   },

@@ -16,7 +16,15 @@ const User = {
     //   return post.author === parent.author;
     // });
   },
-  comments(parent, args, { db, prisma }) {
+  async comments(parent, args, { db, prisma }) {
+    const comments = await prisma.comment.findMany({
+      where: {
+        authorId: +parent.id
+      },
+    });
+
+    return comments;
+
     return db.Comments.filter((c) => {
       return c.post === parent.id;
     });
